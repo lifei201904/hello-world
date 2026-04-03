@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倒计时器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .time-input {
+            margin-bottom: 20px;
+        }
+        
+        .time-input input {
+            width: 60px;
+            padding: 10px;
+            font-size: 18px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 0 5px;
+        }
+        
+        .time-input label {
+            font-size: 14px;
+            color: #666;
+            margin: 0 5px;
+        }
+        
+        #timer {
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            margin: 30px 0;
+        }
+        
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        #startBtn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        #startBtn:hover {
+            background-color: #45a049;
+        }
+        
+        #pauseBtn {
+            background-color: #ff9800;
+            color: white;
+        }
+        
+        #pauseBtn:hover {
+            background-color: #f57c00;
+        }
+        
+        #resetBtn {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        #resetBtn:hover {
+            background-color: #da190b;
+        }
+        
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>倒计时器</h1>
+        
+        <div class="time-input">
+            <input type="number" id="hours" min="0" max="23" value="0" placeholder="时">
+            <label>时</label>
+            <input type="number" id="minutes" min="0" max="59" value="0" placeholder="分">
+            <label>分</label>
+            <input type="number" id="seconds" min="0" max="59" value="10" placeholder="秒">
+            <label>秒</label>
+        </div>
+        
+        <div id="timer">00:00:00</div>
+        
+        <div class="buttons">
+            <button id="startBtn">开始</button>
+            <button id="pauseBtn">暂停</button>
+            <button id="resetBtn">重置</button>
+        </div>
+        
+        <div class="message" id="message"></div>
+    </div>
+    
+    <script>
+        let countdown;
+        let remainingTime = 0;
+        let isPaused = false;
+        
+        // 检查浏览器是否支持通知
+        if ('Notification' in window) {
+            // 请求通知权限
+            Notification.requestPermission();
+        }
+        
+        function updateTimerDisplay() {
+            const hours = Math.floor(remainingTime / 3600);
+            const minutes = Math.floor((remainingTime % 3600) / 60);
+            const seconds = remainingTime % 60;
+            
+            document.getElementById('timer').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function startCountdown() {
+            if (isPaused) {
+                isPaused = false;
+            } else {
+                // 获取用户输入的时间
+                const hours = parseInt(document.getElementById('hours').value) || 0;
+                const minutes = parseInt(document.getElementById('minutes').value) || 0;
+                const seconds = parseInt(document.getElementById('seconds').value) || 0;
+                
+                remainingTime = hours * 3600 + minutes * 60 + seconds;
+                
+                if (remainingTime <= 0) {
+                    showMessage('请设置有效的时间', 'error');
+                    return;
+                }
+            }
+            
+            clearInterval(countdown);
+            updateTimerDisplay();
+            
+            countdown = setInterval(() => {
+                if (remainingTime > 0) {
+                    remainingTime--;
+                    updateTimerDisplay();
+                } else {
+                    clearInterval(countdown);
+                    showNotification();
+                    showMessage('时间到！', 'success');
+                }
+            }, 1000);
+        }
+        
+        function pauseCountdown() {
+            isPaused = true;
+            clearInterval(countdown);
+        }
+        
+        function resetCountdown() {
+            clearInterval(countdown);
+            isPaused = false;
+            remainingTime = 0;
+            updateTimerDisplay();
+            document.getElementById('message').style.display = 'none';
+        }
+        
+        function showNotification() {
+            if (Notification.permission === 'granted') {
+                new Notification('倒计时结束', {
+                    body: '设置的时间已经到了！',
+                    icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><circle cx="64" cy="64" r="60" fill="%234CAF50"/><text x="64" y="72" font-size="48" text-anchor="middle" fill="white">!</text></svg>'
+                });
+            }
+        }
+        
+        function showMessage(text, type) {
+            const message = document.getElementById('message');
+            message.textContent = text;
+            message.className = `message ${type}`;
+        }
+        
+        // 绑定事件
+        document.getElementById('startBtn').addEventListener('click', startCountdown);
+        document.getElementById('pauseBtn').addEventListener('click', pauseCountdown);
+        document.getElementById('resetBtn').addEventListener('click', resetCountdown);
+    </script>
+</body>
+</html>
